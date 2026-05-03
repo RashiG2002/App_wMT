@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('auth/login', { email, password });
       setUserToken(res.data.token);
       setUserData(res.data.user);
       await AsyncStorage.setItem('userToken', res.data.token);
@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     setIsLoading(true);
     try {
-      await api.post('/auth/register', { username, email, password });
-      const loginRes = await api.post('/auth/login', { email, password });
+      await api.post('auth/register', { username, email, password });
+      const loginRes = await api.post('auth/login', { email, password });
       setUserToken(loginRes.data.token);
       setUserData(loginRes.data.user);
       await AsyncStorage.setItem('userToken', loginRes.data.token);
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (username, email) => {
     try {
-      const res = await api.put('/auth/me', { username, email });
+      const res = await api.put('auth/me', { username, email });
       setUserData(res.data);
       await AsyncStorage.setItem('userData', JSON.stringify(res.data));
       return res.data;
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
           setUserData(JSON.parse(data));
         } else {
           // Fallback fetch if data missing
-          const res = await api.get('/auth/me');
+          const res = await api.get('auth/me');
           setUserData(res.data);
           await AsyncStorage.setItem('userData', JSON.stringify(res.data));
         }

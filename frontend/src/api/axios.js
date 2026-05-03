@@ -9,8 +9,8 @@ export const setLogoutHandler = (handler) => {
 };
 
 // UPDATE THIS with your actual Render URL after deployment!
-const LIVE_URL = 'https://appwmt-production.up.railway.app/api';
-const LOCAL_URL = Platform.OS === 'web' ? 'http://localhost:5050/api' : 'http://192.168.8.110:5050/api';
+const LIVE_URL = 'https://appwmt-production.up.railway.app/api/';
+const LOCAL_URL = Platform.OS === 'web' ? 'http://localhost:5050/api/' : 'http://192.168.8.110:5050/api/';
 
 const api = axios.create({
   baseURL: LOCAL_URL, // Use LOCAL_URL for development

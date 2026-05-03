@@ -35,11 +35,11 @@ const ReportsScreen = () => {
     try {
       setLoading(true);
       const [finRes, taskRes, healthRes, skillRes, budgetRes] = await Promise.all([
-        api.get('/finance'),
-        api.get('/tasks'),
-        api.get('/health'),
-        api.get('/skills'),
-        api.get('/budgets')
+        api.get('finance'),
+        api.get('tasks'),
+        api.get('health'),
+        api.get('skills'),
+        api.get('budgets')
       ]);
       
       setData({

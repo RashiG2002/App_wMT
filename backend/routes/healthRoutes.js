@@ -23,6 +23,15 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
+router.put('/:id', auth, async (req, res) => {
+    try {
+        const updatedHealth = await Health.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedHealth);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.delete('/:id', auth, async (req, res) => {
     try {
         await Health.findByIdAndDelete(req.params.id);

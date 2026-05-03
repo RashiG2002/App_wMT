@@ -28,11 +28,12 @@ const HealthScreen = () => {
   const [calories, setCalories] = useState('');
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [editingHealthId, setEditingHealthId] = useState(null);
 
   const fetchHealth = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/health');
+      const res = await api.get('health');
       setHealthData(res.data);
     } catch (e) {
       console.error(e);
@@ -68,8 +69,15 @@ const HealthScreen = () => {
         notes,
         date: date ? new Date(date) : new Date()
       };
-      const res = await api.post('/health', payload);
-      setHealthData([res.data, ...healthData]);
+      
+      if (editingHealthId) {
+        const res = await api.put(`health/${editingHealthId}`, payload);
+        setHealthData(healthData.map(h => h._id === editingHealthId ? res.data : h));
+        setEditingHealthId(null);
+      } else {
+        const res = await api.post('health', payload);
+        setHealthData([res.data, ...healthData]);
+      }
       
       // Reset form
       setActivityType('');
@@ -79,13 +87,34 @@ const HealthScreen = () => {
       setDate('');
     } catch (e) {
       console.error(e);
-      alert("Failed to add health activity.");
+      alert(`Failed to ${editingHealthId ? 'update' : 'log'} health activity.`);
     }
+  };
+
+  const startEdit = (record) => {
+    setEditingHealthId(record._id);
+    setActivityType(record.activityType);
+    setDuration(record.duration.toString());
+    setCalories(record.calories ? record.calories.toString() : '');
+    setNotes(record.notes || '');
+    if (record.date) {
+      const d = new Date(record.date);
+      setDate(`${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingHealthId(null);
+    setActivityType('');
+    setDuration('');
+    setCalories('');
+    setNotes('');
+    setDate('');
   };
 
   const deleteRecord = async (id) => {
     try {
-      await api.delete(`/health/${id}`);
+      await api.delete(`health/${id}`);
       setHealthData(healthData.filter(h => h._id !== id));
     } catch (e) {
       console.error(e);
@@ -210,10 +239,17 @@ const HealthScreen = () => {
           />
         </View>
 
-        <TouchableOpacity style={styles.logButton} onPress={addActivity}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.logButtonText}>Log Activity</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={styles.logButton} onPress={addActivity}>
+            <Ionicons name={editingHealthId ? "save" : "add"} size={18} color="#fff" />
+            <Text style={styles.logButtonText}>{editingHealthId ? "Update Activity" : "Log Activity"}</Text>
+          </TouchableOpacity>
+          {editingHealthId && (
+            <TouchableOpacity style={[styles.logButton, { backgroundColor: '#94a3b8' }]} onPress={cancelEdit}>
+              <Text style={styles.logButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* ── Activity History Table ── */}
@@ -248,7 +284,10 @@ const HealthScreen = () => {
               <Text style={[styles.tableCell, { flex: 2, fontSize: 11, color: '#94a3b8' }]} numberOfLines={1}>
                 {item.notes || '-'}
               </Text>
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+                <TouchableOpacity onPress={() => startEdit(item)}>
+                  <Ionicons name="create-outline" size={18} color="#6C63FF" />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteRecord(item._id)}>
                   <Ionicons name="trash-outline" size={18} color="#e74c3c" />
                 </TouchableOpacity>

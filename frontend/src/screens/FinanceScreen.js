@@ -4,9 +4,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useIsFocused } from '@react-navigation/native';
 
+// Get screen width and check if it's a web view
 const { width } = Dimensions.get('window');
 const isWeb = width > 768;
 
+// Finance screen component
 const FinanceScreen = () => {
   const [activeTab, setActiveTab] = useState('transactions');
   const [finances, setFinances] = useState([]);
@@ -28,7 +30,10 @@ const FinanceScreen = () => {
   const [budgets, setBudgets] = useState([]);
   const [budgetCategory, setBudgetCategory] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
+  const [editingBudgetId, setEditingBudgetId] = useState(null);
 
+  // Fetch financial data from API
   const fetchFinances = async () => {
     try {
       setLoading(true);
@@ -41,6 +46,7 @@ const FinanceScreen = () => {
     }
   };
 
+  // Fetch budget data from API
   const fetchBudgets = async () => {
     try {
       const res = await api.get('/budgets');
@@ -50,6 +56,7 @@ const FinanceScreen = () => {
     }
   };
 
+  // Fetch data when screen is focused
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -59,12 +66,14 @@ const FinanceScreen = () => {
     }
   }, [isFocused]);
 
+  // Add transaction
   const addTransaction = async (type) => {
-    const amount      = type === 'income' ? incAmount      : expAmount;
-    const category    = type === 'income' ? incSource      : expCategory;
-    const date        = type === 'income' ? incDate        : expDate;
+    const amount = type === 'income' ? incAmount : expAmount;
+    const category = type === 'income' ? incSource : expCategory;
+    const date = type === 'income' ? incDate : expDate;
     const description = type === 'income' ? incDescription : expDescription;
 
+    // Validate amount and category
     if (!amount || !category) {
       alert("Please enter both amount and category");
       return;
@@ -74,21 +83,31 @@ const FinanceScreen = () => {
       return;
     }
 
+    // Add or Update transaction
     try {
       const payload = {
         amount: Number(amount),
         category,
         type,
-        ...(date        ? { date }        : {}),
+        ...(date ? { date } : {}),
         ...(description ? { description } : {}),
       };
-      const res = await api.post('/finance', payload);
       
+      let res;
+      if (editingTransactionId) {
+        res = await api.put(`finance/${editingTransactionId}`, payload);
+        setFinances(finances.map(f => f._id === editingTransactionId ? res.data : f));
+        setEditingTransactionId(null);
+      } else {
+        res = await api.post('finance', payload);
+        setFinances([res.data, ...finances]);
+      }
+
       // Check if expense exceeds budget
       if (type === 'expense') {
         const budget = budgets.find(b => b.category.toLowerCase() === category.toLowerCase());
         if (budget) {
-          const spent = getCategorySpent(category) + Number(amount);
+          const spent = getCategorySpent(category) + (editingTransactionId ? 0 : Number(amount));
           if (spent > budget.limit) {
             const over = spent - budget.limit;
             Alert.alert(
@@ -99,7 +118,7 @@ const FinanceScreen = () => {
         }
       }
 
-      setFinances([res.data, ...finances]);
+      // Reset form
       if (type === 'income') {
         setIncAmount('');
         setIncSource('');
@@ -113,19 +132,49 @@ const FinanceScreen = () => {
       }
     } catch (e) {
       console.error(e);
-      alert("Failed to add transaction. Check your data.");
+      alert(`Failed to ${editingTransactionId ? 'update' : 'add'} transaction.`);
     }
   };
 
+  const startEditTransaction = (item) => {
+    setEditingTransactionId(item._id);
+    setActiveTab('transactions'); // Ensure we are on transactions tab
+    if (item.type === 'income') {
+      setIncAmount(item.amount.toString());
+      setIncSource(item.category);
+      setIncDate(item.date ? new Date(item.date).toISOString().slice(0, 10) : '');
+      setIncDescription(item.description || '');
+    } else {
+      setExpAmount(item.amount.toString());
+      setExpCategory(item.category);
+      setExpDate(item.date ? new Date(item.date).toISOString().slice(0, 10) : '');
+      setExpDescription(item.description || '');
+    }
+  };
+
+  const cancelEditTransaction = () => {
+    setEditingTransactionId(null);
+    setIncAmount('');
+    setIncSource('');
+    setIncDate('');
+    setIncDescription('');
+    setExpAmount('');
+    setExpCategory('');
+    setExpDate('');
+    setExpDescription('');
+  };
+
+  // Delete transaction from API
   const deleteTransaction = async (id) => {
     try {
-      await api.delete(`/finance/${id}`);
+      await api.delete(`finance/${id}`);
       setFinances(finances.filter(f => f._id !== id));
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Add budget to API
   const addBudget = async () => {
     if (!budgetCategory || !budgetLimit) {
       alert("Please enter both category and limit");
@@ -135,40 +184,66 @@ const FinanceScreen = () => {
       alert("Please enter a valid positive limit");
       return;
     }
+    // Add or Update budget
     try {
-      const res = await api.post('/budgets', {
+      const payload = {
         category: budgetCategory,
         limit: Number(budgetLimit),
         month: new Date().toISOString().slice(0, 7)
-      });
-      setBudgets([res.data, ...budgets]);
+      };
+
+      if (editingBudgetId) {
+        const res = await api.put(`budgets/${editingBudgetId}`, payload);
+        setBudgets(budgets.map(b => b._id === editingBudgetId ? res.data : b));
+        setEditingBudgetId(null);
+      } else {
+        const res = await api.post('budgets', payload);
+        setBudgets([res.data, ...budgets]);
+      }
+
       setBudgetCategory('');
       setBudgetLimit('');
     } catch (e) {
       console.error(e);
-      alert("Failed to add budget.");
+      alert(`Failed to ${editingBudgetId ? 'update' : 'add'} budget.`);
     }
   };
 
+  const startEditBudget = (budget) => {
+    setEditingBudgetId(budget._id);
+    setBudgetCategory(budget.category);
+    setBudgetLimit(budget.limit.toString());
+  };
+
+  const cancelEditBudget = () => {
+    setEditingBudgetId(null);
+    setBudgetCategory('');
+    setBudgetLimit('');
+  };
+
+  // Delete budget from API
   const deleteBudget = async (id) => {
     try {
-      await api.delete(`/budgets/${id}`);
+      await api.delete(`budgets/${id}`);
       setBudgets(budgets.filter(b => b._id !== id));
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Get total spent for a category
   const getCategorySpent = (category) => {
     return finances
       .filter(f => f.type === 'expense' && f.category.toLowerCase() === category.toLowerCase())
       .reduce((acc, curr) => acc + curr.amount, 0);
   };
 
+  // Calculate total income, expense, and balance
   const totalIncome = finances.filter(f => f.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = finances.filter(f => f.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const balance = totalIncome - totalExpense;
 
+  // Render transactions tab
   const renderTransactionsTab = () => (
     <View>
       <View style={styles.metricsGrid}>
@@ -181,7 +256,7 @@ const FinanceScreen = () => {
             <Text style={styles.metricValue}>Rs. {totalIncome.toFixed(2)}</Text>
           </View>
         </View>
-        
+
         <View style={styles.metricCard}>
           <View style={[styles.iconBox, { backgroundColor: '#ff7979' }]}>
             <Ionicons name="arrow-down" size={24} color="#fff" />
@@ -261,10 +336,17 @@ const FinanceScreen = () => {
             numberOfLines={3}
           />
 
-          <TouchableOpacity style={styles.btnIncome} onPress={() => addTransaction('income')}>
-            <Ionicons name="add" size={16} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={styles.btnIncomeText}>Add Income</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={styles.btnIncome} onPress={() => addTransaction('income')}>
+              <Ionicons name={editingTransactionId ? "save" : "add"} size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.btnIncomeText}>{editingTransactionId ? "Update Income" : "Add Income"}</Text>
+            </TouchableOpacity>
+            {editingTransactionId && (
+              <TouchableOpacity style={[styles.btnIncome, { backgroundColor: '#94a3b8' }]} onPress={cancelEditTransaction}>
+                <Text style={styles.btnIncomeText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* ── Add Expense Form ── */}
@@ -324,10 +406,17 @@ const FinanceScreen = () => {
             numberOfLines={3}
           />
 
-          <TouchableOpacity style={styles.btnExpense} onPress={() => addTransaction('expense')}>
-            <Ionicons name="remove" size={16} color="#ff7675" style={{ marginRight: 6 }} />
-            <Text style={styles.btnExpenseText}>Add Expense</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={styles.btnExpense} onPress={() => addTransaction('expense')}>
+              <Ionicons name={editingTransactionId ? "save" : "remove"} size={16} color="#ff7675" style={{ marginRight: 6 }} />
+              <Text style={styles.btnExpenseText}>{editingTransactionId ? "Update Expense" : "Add Expense"}</Text>
+            </TouchableOpacity>
+            {editingTransactionId && (
+              <TouchableOpacity style={[styles.btnExpense, { borderColor: '#94a3b8' }]} onPress={cancelEditTransaction}>
+                <Text style={[styles.btnExpenseText, { color: '#94a3b8' }]}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -337,20 +426,23 @@ const FinanceScreen = () => {
           <Text style={styles.formTitle}>Recent Transactions</Text>
         </View>
         <View style={styles.tableHeader}>
-           <Text style={[styles.th, {flex: 2}]}>DATE</Text>
-           <Text style={[styles.th, {flex: 3}]}>CATEGORY</Text>
-           <Text style={[styles.th, {flex: 2, textAlign: 'right'}]}>AMOUNT</Text>
-           <Text style={[styles.th, {flex: 1, textAlign: 'center'}]}>ACTION</Text>
+          <Text style={[styles.th, { flex: 2 }]}>DATE</Text>
+          <Text style={[styles.th, { flex: 3 }]}>CATEGORY</Text>
+          <Text style={[styles.th, { flex: 2, textAlign: 'right' }]}>AMOUNT</Text>
+          <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>ACTION</Text>
         </View>
-        {loading ? <ActivityIndicator size="large" color="#6C63FF" style={{marginTop: 20}} /> : (
+        {loading ? <ActivityIndicator size="large" color="#6C63FF" style={{ marginTop: 20 }} /> : (
           finances.map(item => (
             <View key={item._id} style={styles.tableRow}>
-              <Text style={[styles.td, {flex: 2}]}>{new Date(item.date).toLocaleDateString()}</Text>
-              <Text style={[styles.td, {flex: 3, fontWeight: '600'}]}>{item.category}</Text>
-              <Text style={[styles.td, {flex: 2, textAlign: 'right', fontWeight: 'bold', color: item.type === 'income' ? '#2ecc71' : '#e74c3c' }]}>
+              <Text style={[styles.td, { flex: 2 }]}>{new Date(item.date).toLocaleDateString()}</Text>
+              <Text style={[styles.td, { flex: 3, fontWeight: '600' }]}>{item.category}</Text>
+              <Text style={[styles.td, { flex: 2, textAlign: 'right', fontWeight: 'bold', color: item.type === 'income' ? '#2ecc71' : '#e74c3c' }]}>
                 {item.type === 'income' ? '+' : '-'}Rs. {item.amount.toFixed(2)}
               </Text>
-              <View style={{flex: 1, alignItems: 'center'}}>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+                <TouchableOpacity onPress={() => startEditTransaction(item)}>
+                  <Ionicons name="create-outline" size={20} color="#6C63FF" />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteTransaction(item._id)}>
                   <Ionicons name="trash-outline" size={20} color="#e74c3c" />
                 </TouchableOpacity>
@@ -401,9 +493,14 @@ const FinanceScreen = () => {
               <View key={budget._id} style={styles.budgetItem}>
                 <View style={styles.budgetRow}>
                   <Text style={styles.budgetName}>{budget.category}</Text>
-                  <TouchableOpacity onPress={() => deleteBudget(budget._id)}>
-                    <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity onPress={() => startEditBudget(budget)}>
+                      <Ionicons name="create-outline" size={18} color="#6C63FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteBudget(budget._id)}>
+                      <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.progressContainer}>
                   <View style={[styles.progressBar, { width: `${progress * 100}%`, backgroundColor: progress > 0.9 ? '#e74c3c' : '#6C63FF' }]} />
@@ -419,37 +516,48 @@ const FinanceScreen = () => {
       </View>
 
       <View style={styles.listCard}>
-         <View style={styles.formHeader}>
-            <Ionicons name="add-circle" size={20} color="#111" />
-            <Text style={styles.formTitle}>Create New Budget</Text>
+        <View style={styles.formHeader}>
+          <Ionicons name="add-circle" size={20} color="#111" />
+          <Text style={styles.formTitle}>Create New Budget</Text>
+        </View>
+        <View style={{ flexDirection: isWeb ? 'row' : 'column', gap: 15 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.inputLabel}>Category</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Select Category"
+              value={budgetCategory}
+              onChangeText={setBudgetCategory}
+            />
           </View>
-          <View style={{flexDirection: isWeb ? 'row' : 'column', gap: 15}}>
-             <View style={{flex: 1}}>
-                <Text style={styles.inputLabel}>Category</Text>
-                <TextInput 
-                  style={styles.input} 
-                  placeholder="Select Category" 
-                  value={budgetCategory}
-                  onChangeText={setBudgetCategory}
-                />
-             </View>
-             <View style={{flex: 1}}>
-                <Text style={styles.inputLabel}>Monthly Limit (Rs.)</Text>
-                <TextInput 
-                  style={styles.input} 
-                  placeholder="Enter limit" 
-                  keyboardType="numeric"
-                  value={budgetLimit}
-                  onChangeText={setBudgetLimit}
-                />
-             </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.inputLabel}>Monthly Limit (Rs.)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter limit"
+              keyboardType="numeric"
+              value={budgetLimit}
+              onChangeText={setBudgetLimit}
+            />
           </View>
-          <TouchableOpacity 
-            style={[styles.btnIncome, {backgroundColor: '#111', alignSelf: 'flex-start', marginTop: 15}]}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+          <TouchableOpacity
+            style={[styles.btnIncome, { backgroundColor: '#111', alignSelf: 'flex-start' }]}
             onPress={addBudget}
           >
-            <Text style={styles.btnIncomeText}>Create Budget</Text>
+            <Ionicons name={editingBudgetId ? "save" : "add"} size={16} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.btnIncomeText}>{editingBudgetId ? "Update Budget" : "Create Budget"}</Text>
           </TouchableOpacity>
+          {editingBudgetId && (
+            <TouchableOpacity
+              style={[styles.btnIncome, { backgroundColor: '#94a3b8', alignSelf: 'flex-start' }]}
+              onPress={cancelEditBudget}
+            >
+              <Text style={styles.btnIncomeText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -457,13 +565,13 @@ const FinanceScreen = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.tabRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'transactions' && styles.tabBtnActive]}
           onPress={() => setActiveTab('transactions')}
         >
           <Text style={[styles.tabBtnText, activeTab === 'transactions' && styles.tabBtnTextActive]}>Transactions</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'budgets' && styles.tabBtnActive]}
           onPress={() => setActiveTab('budgets')}
         >

@@ -28,11 +28,12 @@ const TasksScreen = () => {
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [priority, setPriority] = useState('Medium');
+  const [editingTaskId, setEditingTaskId] = useState(null);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tasks');
+      const res = await api.get('tasks');
       setTasks(res.data);
     } catch (e) {
       console.error(e);
@@ -49,7 +50,7 @@ const TasksScreen = () => {
     }
   }, [isFocused]);
 
-  const addTask = async () => {
+  const saveTask = async () => {
     if (!title.trim()) {
       alert("Please enter a task title");
       return;
@@ -63,8 +64,16 @@ const TasksScreen = () => {
         time,
         dueDate: date ? new Date(date) : undefined
       };
-      const res = await api.post('/tasks', payload);
-      setTasks([res.data, ...tasks]);
+      
+      let res;
+      if (editingTaskId) {
+        res = await api.put(`tasks/${editingTaskId}`, payload);
+        setTasks(tasks.map(t => t._id === editingTaskId ? res.data : t));
+        setEditingTaskId(null);
+      } else {
+        res = await api.post('tasks', payload);
+        setTasks([res.data, ...tasks]);
+      }
       
       // Reset form
       setTitle('');
@@ -75,14 +84,39 @@ const TasksScreen = () => {
       setPriority('Medium');
     } catch (e) {
       console.error(e);
-      alert("Failed to add task.");
+      alert(`Failed to ${editingTaskId ? 'update' : 'add'} task.`);
     }
+  };
+
+  const startEdit = (task) => {
+    setEditingTaskId(task._id);
+    setTitle(task.title);
+    setDescription(task.description || '');
+    setPriority(task.priority || 'Medium');
+    setLocation(task.location || '');
+    setTime(task.time || '');
+    if (task.dueDate) {
+      const d = new Date(task.dueDate);
+      setDate(`${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
+    } else {
+      setDate('');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingTaskId(null);
+    setTitle('');
+    setDescription('');
+    setDate('');
+    setTime('');
+    setLocation('');
+    setPriority('Medium');
   };
 
   const toggleStatus = async (task) => {
     try {
       const newStatus = task.status === 'Completed' ? 'Pending' : 'Completed';
-      const res = await api.put(`/tasks/${task._id}`, { status: newStatus });
+      const res = await api.put(`tasks/${task._id}`, { status: newStatus });
       setTasks(tasks.map(t => t._id === task._id ? res.data : t));
     } catch (e) {
       console.error(e);
@@ -91,7 +125,7 @@ const TasksScreen = () => {
 
   const deleteTask = async (id) => {
     try {
-      await api.delete(`/tasks/${id}`);
+      await api.delete(`tasks/${id}`);
       setTasks(tasks.filter(t => t._id !== id));
     } catch (e) {
       console.error(e);
@@ -186,10 +220,17 @@ const TasksScreen = () => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addButton} onPress={addTask}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add Task</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={styles.addButton} onPress={saveTask}>
+            <Ionicons name={editingTaskId ? "save" : "add"} size={20} color="#fff" />
+            <Text style={styles.addButtonText}>{editingTaskId ? "Update Task" : "Add Task"}</Text>
+          </TouchableOpacity>
+          {editingTaskId && (
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: '#94a3b8' }]} onPress={cancelEdit}>
+              <Text style={styles.addButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* ── Task List Table ── */}
@@ -239,6 +280,9 @@ const TasksScreen = () => {
               </View>
 
               <View style={styles.actionRow}>
+                <TouchableOpacity onPress={() => startEdit(item)} style={styles.actionBtn}>
+                  <Ionicons name="create-outline" size={20} color="#6C63FF" />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => toggleStatus(item)} style={styles.actionBtn}>
                   <Ionicons 
                     name={item.status === 'Completed' ? "checkmark-circle" : "ellipse-outline"} 

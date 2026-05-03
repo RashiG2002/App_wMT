@@ -23,6 +23,15 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
+router.put('/:id', auth, async (req, res) => {
+    try {
+        const updatedBudget = await Budget.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedBudget);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.delete('/:id', auth, async (req, res) => {
     try {
         await Budget.findByIdAndDelete(req.params.id);

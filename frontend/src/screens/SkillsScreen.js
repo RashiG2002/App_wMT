@@ -26,6 +26,7 @@ const SkillsScreen = () => {
   const [newSkillName, setNewSkillName] = useState('');
   const [newSkillLevel, setNewSkillLevel] = useState('Beginner');
   const [newTargetHours, setNewTargetHours] = useState('');
+  const [editingSkillId, setEditingSkillId] = useState(null);
 
   // Practice Log State for existing skills
   const [logFormState, setLogFormState] = useState({});
@@ -33,7 +34,7 @@ const SkillsScreen = () => {
   const fetchSkills = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/skills');
+      const res = await api.get('skills');
       if (res.data && Array.isArray(res.data)) {
         setSkills(res.data);
       } else {
@@ -64,22 +65,43 @@ const SkillsScreen = () => {
         level: newSkillLevel,
         targetHours: Number(newTargetHours) || 0
       };
-      const res = await api.post('/skills', payload);
-      setSkills(prev => [res.data, ...prev]);
+      
+      if (editingSkillId) {
+        const res = await api.put(`skills/${editingSkillId}`, payload);
+        setSkills(prev => prev.map(s => s._id === editingSkillId ? res.data : s));
+        setEditingSkillId(null);
+      } else {
+        const res = await api.post('skills', payload);
+        setSkills(prev => [res.data, ...prev]);
+      }
       
       // Reset form
       setNewSkillName('');
       setNewSkillLevel('Beginner');
       setNewTargetHours('');
     } catch (e) {
-      console.error('Add skill error:', e);
-      alert("Failed to add skill.");
+      console.error('Add/Update skill error:', e);
+      alert(`Failed to ${editingSkillId ? 'update' : 'add'} skill.`);
     }
+  };
+
+  const startEditSkill = (skill) => {
+    setEditingSkillId(skill._id);
+    setNewSkillName(skill.skillName);
+    setNewSkillLevel(skill.level || 'Beginner');
+    setNewTargetHours(skill.targetHours ? skill.targetHours.toString() : '');
+  };
+
+  const cancelEditSkill = () => {
+    setEditingSkillId(null);
+    setNewSkillName('');
+    setNewSkillLevel('Beginner');
+    setNewTargetHours('');
   };
 
   const deleteSkill = async (id) => {
     try {
-      await api.delete(`/skills/${id}`);
+      await api.delete(`skills/${id}`);
       setSkills(prev => prev.filter(s => s._id !== id));
     } catch (e) {
       console.error('Delete skill error:', e);
@@ -113,7 +135,7 @@ const SkillsScreen = () => {
         date: form.date ? new Date(form.date) : new Date(),
         description: form.description
       };
-      const res = await api.post(`/skills/${skillId}/practice`, payload);
+      const res = await api.post(`skills/${skillId}/practice`, payload);
       setSkills(prev => prev.map(s => s._id === skillId ? res.data : s));
       
       // Reset log form for this skill
@@ -215,10 +237,17 @@ const SkillsScreen = () => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addButton} onPress={addSkill}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.addButtonText}>Add Skill</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={styles.addButton} onPress={addSkill}>
+            <Ionicons name={editingSkillId ? "save" : "add"} size={18} color="#fff" />
+            <Text style={styles.addButtonText}>{editingSkillId ? "Update Skill" : "Add Skill"}</Text>
+          </TouchableOpacity>
+          {editingSkillId && (
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: '#94a3b8' }]} onPress={cancelEditSkill}>
+              <Text style={styles.addButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* ── Your Skills List ── */}
@@ -298,13 +327,23 @@ const SkillsScreen = () => {
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity 
-                  style={styles.deleteSkillBtn} 
-                  onPress={() => deleteSkill(skill._id)}
-                >
-                  <Ionicons name="trash-outline" size={14} color="#e74c3c" />
-                  <Text style={styles.deleteSkillText}>Delete</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 15, marginTop: 15 }}>
+                  <TouchableOpacity 
+                    style={[styles.deleteSkillBtn, { backgroundColor: '#f0eeff' }]} 
+                    onPress={() => startEditSkill(skill)}
+                  >
+                    <Ionicons name="create-outline" size={14} color="#6C63FF" />
+                    <Text style={[styles.deleteSkillText, { color: '#6C63FF' }]}>Edit</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.deleteSkillBtn} 
+                    onPress={() => deleteSkill(skill._id)}
+                  >
+                    <Ionicons name="trash-outline" size={14} color="#e74c3c" />
+                    <Text style={styles.deleteSkillText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           })
