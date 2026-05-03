@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 // UPDATE THIS with your actual Render URL after deployment!
 const LIVE_URL = 'https://YOUR_RENDER_BACKEND_URL.onrender.com/api';
-const LOCAL_URL = Platform.OS === 'web' ? 'http://localhost:5000/api' : 'http://192.168.8.110:5000/api';
+const LOCAL_URL = Platform.OS === 'web' ? 'http://localhost:5050/api' : 'http://192.168.8.110:5050/api';
 
 const api = axios.create({
   baseURL: LIVE_URL, // Switch to LOCAL_URL when testing on your own machine
