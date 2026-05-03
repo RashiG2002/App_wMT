@@ -86,6 +86,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    import('../api/axios').then(({ setLogoutHandler }) => {
+      setLogoutHandler(logout);
+    });
     isLoggedIn();
   }, []);
 

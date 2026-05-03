@@ -7,6 +7,14 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const { login } = useContext(AuthContext);
 
+  const handleLogin = () => {
+    if (!email.trim() || !password.trim()) {
+      alert("Please fill all fields");
+      return;
+    }
+    login(email, password);
+  };
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.card}>
@@ -31,7 +39,7 @@ const LoginScreen = ({ navigation }) => {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={() => login(email, password)}>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
 

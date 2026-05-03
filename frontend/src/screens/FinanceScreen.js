@@ -65,7 +65,15 @@ const FinanceScreen = () => {
     const date        = type === 'income' ? incDate        : expDate;
     const description = type === 'income' ? incDescription : expDescription;
 
-    if (!amount || !category) return;
+    if (!amount || !category) {
+      alert("Please enter both amount and category");
+      return;
+    }
+    if (isNaN(amount) || Number(amount) <= 0) {
+      alert("Please enter a valid positive amount");
+      return;
+    }
+
     try {
       const payload = {
         amount: Number(amount),
@@ -105,6 +113,7 @@ const FinanceScreen = () => {
       }
     } catch (e) {
       console.error(e);
+      alert("Failed to add transaction. Check your data.");
     }
   };
 
@@ -118,7 +127,14 @@ const FinanceScreen = () => {
   };
 
   const addBudget = async () => {
-    if (!budgetCategory || !budgetLimit) return;
+    if (!budgetCategory || !budgetLimit) {
+      alert("Please enter both category and limit");
+      return;
+    }
+    if (isNaN(budgetLimit) || Number(budgetLimit) <= 0) {
+      alert("Please enter a valid positive limit");
+      return;
+    }
     try {
       const res = await api.post('/budgets', {
         category: budgetCategory,
@@ -130,6 +146,7 @@ const FinanceScreen = () => {
       setBudgetLimit('');
     } catch (e) {
       console.error(e);
+      alert("Failed to add budget.");
     }
   };
 

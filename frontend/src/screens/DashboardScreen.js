@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useIsFocused } from '@react-navigation/native';
+import { PieChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get('window');
 
@@ -122,6 +123,31 @@ const DashboardScreen = ({ navigation }) => {
           ))}
         </ScrollView>
       </View>
+
+      {/* ── Overview Chart ── */}
+      <View style={styles.chartCard}>
+        <View style={styles.quickActionsHeader}>
+          <Ionicons name="pie-chart" size={20} color="#111" />
+          <Text style={styles.quickActionsTitle}>Activity Distribution</Text>
+        </View>
+        <PieChart
+          data={[
+            { name: "Finance", population: data.finance.length, color: "#4cd137", legendFontColor: "#7F7F7F", legendFontSize: 12 },
+            { name: "Tasks", population: data.tasks.length, color: "#00cec9", legendFontColor: "#7F7F7F", legendFontSize: 12 },
+            { name: "Health", population: data.health.length, color: "#ff7675", legendFontColor: "#7F7F7F", legendFontSize: 12 },
+            { name: "Skills", population: data.skills.length, color: "#6c5ce7", legendFontColor: "#7F7F7F", legendFontSize: 12 }
+          ]}
+          width={width - 60}
+          height={200}
+          chartConfig={{
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          }}
+          accessor={"population"}
+          backgroundColor={"transparent"}
+          paddingLeft={"15"}
+          absolute
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -215,6 +241,17 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  chartCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 3,
   },
 });
 

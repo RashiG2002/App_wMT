@@ -50,7 +50,10 @@ const TasksScreen = () => {
   }, [isFocused]);
 
   const addTask = async () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      alert("Please enter a task title");
+      return;
+    }
     try {
       const payload = {
         title,
@@ -72,6 +75,7 @@ const TasksScreen = () => {
       setPriority('Medium');
     } catch (e) {
       console.error(e);
+      alert("Failed to add task.");
     }
   };
 

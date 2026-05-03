@@ -50,7 +50,15 @@ const HealthScreen = () => {
   }, [isFocused]);
 
   const addActivity = async () => {
-    if (!activityType || !duration) return;
+    if (!activityType.trim() || !duration) {
+      alert("Please enter activity type and duration");
+      return;
+    }
+    if (isNaN(duration) || Number(duration) <= 0) {
+      alert("Please enter a valid duration");
+      return;
+    }
+
     try {
       const payload = {
         type: 'activity',
@@ -71,6 +79,7 @@ const HealthScreen = () => {
       setDate('');
     } catch (e) {
       console.error(e);
+      alert("Failed to add health activity.");
     }
   };
 
@@ -210,7 +219,7 @@ const HealthScreen = () => {
       {/* ── Activity History Table ── */}
       <View style={[styles.card, { marginTop: 20 }]}>
         <View style={styles.cardTitleRow}>
-          <Ionicons name="history" size={20} color="#1a1a2e" />
+          <Ionicons name="time-outline" size={20} color="#1a1a2e" />
           <Text style={styles.cardHeader}>Activity History</Text>
         </View>
 

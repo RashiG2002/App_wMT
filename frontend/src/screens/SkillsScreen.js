@@ -54,7 +54,10 @@ const SkillsScreen = () => {
   }, [isFocused]);
 
   const addSkill = async () => {
-    if (!newSkillName.trim()) return;
+    if (!newSkillName.trim()) {
+      alert("Please enter a skill name");
+      return;
+    }
     try {
       const payload = {
         skillName: newSkillName,
@@ -70,6 +73,7 @@ const SkillsScreen = () => {
       setNewTargetHours('');
     } catch (e) {
       console.error('Add skill error:', e);
+      alert("Failed to add skill.");
     }
   };
 
@@ -94,7 +98,14 @@ const SkillsScreen = () => {
 
   const logPractice = async (skillId) => {
     const form = logFormState[skillId];
-    if (!form || !form.hours) return;
+    if (!form || !form.hours) {
+      alert("Please enter practice hours");
+      return;
+    }
+    if (isNaN(form.hours) || Number(form.hours) <= 0) {
+      alert("Please enter valid positive hours");
+      return;
+    }
 
     try {
       const payload = {
@@ -111,6 +122,7 @@ const SkillsScreen = () => {
       updateLogForm(skillId, 'description', '');
     } catch (e) {
       console.error('Log practice error:', e);
+      alert("Failed to log practice.");
     }
   };
 
@@ -159,7 +171,7 @@ const SkillsScreen = () => {
 
         <View style={styles.metricCard}>
           <View style={[styles.iconBox, { backgroundColor: '#e0fcfc' }]}>
-            <Ionicons name="target" size={18} color="#00d084" />
+            <Ionicons name="disc-outline" size={18} color="#00d084" />
           </View>
           <View>
             <Text style={styles.metricLabel}>Active Goals</Text>

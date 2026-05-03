@@ -10,6 +10,19 @@ const RegisterScreen = ({ navigation }) => {
   const { register } = useContext(AuthContext);
 
   const handleRegister = () => {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      alert("Please fill all fields");
+      return;
+    }
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      alert("Please enter a valid email");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters");
+      return;
+    }
     if (password !== confirmPassword) {
       alert("Passwords don't match");
       return;
